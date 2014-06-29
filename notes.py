@@ -75,11 +75,13 @@ class Form(QDialog):
         query.exec_()
         query.exec_("SELECT id,title,note,author FROM notes")
         query.last()
+        self.nextButton.setEnabled(True)
+        self.prevButton.setEnabled(True)
         
     
     def prevClick(self):
-    	self.nextButton.setEnabled(True)
-    	self.prevButton.setEnabled(True)
+        self.nextButton.setEnabled(True)
+        self.prevButton.setEnabled(True)
         if query.at() < 0:
             query.last()
             self.nextButton.setEnabled(False)
@@ -96,8 +98,8 @@ class Form(QDialog):
         self.titleEdit.setFocus()
 
     def nextClick(self):
-    	self.nextButton.setEnabled(True)
-    	self.prevButton.setEnabled(True)
+        self.nextButton.setEnabled(True)
+        self.prevButton.setEnabled(True)
         if query.at() < 0:
             query.first()
             self.prevButton.setEnabled(False)

@@ -18,6 +18,8 @@ class Form(QDialog):
 
         self.acceptButton = QPushButton("&Save")
         self.resetButton = QPushButton("&Reset")
+        self.deleteButton = QPushButton("&Del")
+        self.deleteButton.setIcon(QIcon("./images/delete.png"))
         self.prevButton = QPushButton()
         self.prevButton.setIcon(QIcon("./images/prev.png"))
         self.nextButton = QPushButton()
@@ -25,19 +27,21 @@ class Form(QDialog):
 
         layout = QGridLayout()
         layout.addWidget(titleLabel,0,0)
-        layout.addWidget(self.titleEdit,0,1,1,3)
+        layout.addWidget(self.titleEdit,0,1,1,4)
         layout.addWidget(noteLabel,1,0)
-        layout.addWidget(self.noteText,1,1,5,3)
+        layout.addWidget(self.noteText,1,1,5,4)
         layout.addWidget(authorLabel,6,0)
-        layout.addWidget(self.authorEdit,6,1,1,3)
+        layout.addWidget(self.authorEdit,6,1,1,4)
         layout.addWidget(self.prevButton,7,0)
         layout.addWidget(self.acceptButton,7,1)
-        layout.addWidget(self.resetButton,7,2)
-        layout.addWidget(self.nextButton,7,3)
+        layout.addWidget(self.deleteButton,7,2)
+        layout.addWidget(self.resetButton,7,3)
+        layout.addWidget(self.nextButton,7,4)
         self.setLayout(layout)
 
         self.resetButton.clicked.connect(self.resetUi)
         self.acceptButton.clicked.connect(self.acceptUi)
+        self.deleteButton.clicked.connect(self.deleteNote)
         self.prevButton.clicked.connect(self.prevClick)
         self.nextButton.clicked.connect(self.nextClick)
         self.setWindowTitle("Notify")
@@ -47,7 +51,8 @@ class Form(QDialog):
 
     def load_initial(self):
         query.exec_("SELECT id,title,note,author FROM notes")
-        query.first()
+        if query.first() == False:
+            return
         title = query.value(1).toString()
         note = query.value(2).toString()
         author = query.value(3).toString()
@@ -55,6 +60,8 @@ class Form(QDialog):
         self.noteText.setText(note)
         self.authorEdit.setText(author)
         self.titleEdit.setFocus()
+        self.nextButton.setEnabled(True)
+        self.prevButton.setEnabled(True)
 
 
 
@@ -75,16 +82,47 @@ class Form(QDialog):
         query.exec_()
         query.exec_("SELECT id,title,note,author FROM notes")
         query.last()
-        self.nextButton.setEnabled(True)
-        self.prevButton.setEnabled(True)
         
     
+    def deleteNote(self):
+        if query.at() < 0:
+            return
+        current_id = query.value(0).toInt()[0]
+        fallback_id = None
+        ''' If there's just 1 row, clear text in app.
+            If this is not the 1st entry, fall back on the prev one.
+            If this is the 1st entry, fall back on the next one '''
+        if (query.seek(-1,relative=True) == False) and (query.seek(1,relative=True) == False):
+            self.titleEdit.clear()
+            self.noteText.clear()
+            self.authorEdit.clear()
+        else:
+            fallback_id = query.at()
+            print "Fallback id " + str(fallback_id)
+            print "Current id " + str(current_id)
+            title_text = query.value(1).toString()
+            note = query.value(2).toString()
+            author = query.value(3).toString()
+            self.titleEdit.setText(title_text)
+            self.noteText.setText(note)
+            self.authorEdit.setText(author)
+            
+        query.exec_("DELETE FROM notes WHERE id = " + QString.number(current_id))
+
+        if fallback_id is None:
+            pass
+        else:
+            print fallback_id
+            query.exec_("SELECT id,title,note,author FROM NOTES")
+            query.seek(fallback_id)
+
+
     def prevClick(self):
         self.nextButton.setEnabled(True)
         self.prevButton.setEnabled(True)
         if query.at() < 0:
-            query.last()
-            self.nextButton.setEnabled(False)
+            self.prevButton.setEnabled(False)
+            return
         if query.previous() == False:
             query.next()
             self.prevButton.setEnabled(False)
@@ -101,8 +139,8 @@ class Form(QDialog):
         self.nextButton.setEnabled(True)
         self.prevButton.setEnabled(True)
         if query.at() < 0:
-            query.first()
-            self.prevButton.setEnabled(False)
+            self.nextButton.setEnabled(False)
+            return
         print query.at()
         if query.next() == False:
             query.previous()
